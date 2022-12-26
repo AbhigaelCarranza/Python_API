@@ -1,13 +1,16 @@
-#Python
+# Python
 import json
 from uuid import UUID
-from datetime import date, datetime
+from datetime import date
+from datetime import datetime
 from typing import Optional, List
 
-#Pydantic
-from pydantic import BaseModel,EmailStr,Field
+# Pydantic
+from pydantic import BaseModel
+from pydantic import EmailStr
+from pydantic import Field
 
-#FastAPI
+# FastAPI
 from fastapi import FastAPI
 from fastapi import status
 from fastapi import Body
@@ -86,7 +89,7 @@ def signup(user: UserRegister = Body(...)):
         - email: Emailstr
         - first_name: str
         - last_name: str
-        - birth_date: str
+        - birth_date: datetime
     """
     with open("users.json", "r+", encoding="utf-8") as f: 
         results = json.loads(f.read())
@@ -118,7 +121,20 @@ def login():
     tags=["Users"]
 )
 def show_all_users(): 
-    pass
+    """
+    This path operation shows all users in the app
+    Parameters: 
+        -
+    Returns a json list with all users in the app, with the following keys: 
+        - user_id: UUID
+        - email: Emailstr
+        - first_name: str
+        - last_name: str
+        - birth_date: datetime
+    """
+    with open("users.json", "r", encoding="utf-8") as f: 
+        results = json.loads(f.read())
+        return results
 
 ###Show a user
 @app.get(

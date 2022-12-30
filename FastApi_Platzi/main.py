@@ -10,10 +10,14 @@ from pydantic import BaseModel, Field
 #Python
 from typing import Optional, List
 from jwt_manager import create_token, validate_token
+from models.movie import Movie as MovieModel
+from config.database import Session, engine, Base
 
 app = FastAPI()
 app.title = "Mi aplicación con  FastAPI"
 app.version = "0.0.1"
+
+Base.metadata.create_all(bind=engine)
 
 #Models
 ##Token
@@ -146,7 +150,10 @@ def get_movies_by_category(category: str = Query(min_length=5, max_length=15)) -
     status_code=status.HTTP_201_CREATED
     )
 def create_movie(movie: Movie) -> dict:
-    movies.append(movie)
+    db = Session()                          #se crea una session
+    new_movie = MovieModel(**movie.dict()) #se pasan los parametros como un diccionario opcional kwargs, de la clase Movie
+    db.add(new_movie)                       #se añade la pelicula nueva a la base de datos
+    db.commit() #Se actualiza la tabla
     return JSONResponse(status_code=status.HTTP_201_CREATED,content={"message": "Se ha registrado la película"})
 
 ##Update a Movie

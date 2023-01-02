@@ -3,6 +3,7 @@ from fastapi import FastAPI, Body, Path, Query, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi import status
 from fastapi.security import HTTPBearer
+from fastapi.encoders import jsonable_encoder
 
 #Pydantic
 from pydantic import BaseModel, Field
@@ -116,7 +117,9 @@ def login(user: User):
     dependencies=[Depends(JWTBearer())]
     )
 def get_movies() -> List[Movie]:
-    return JSONResponse(status_code=status.HTTP_200_OK,content=movies)
+    db = Session()
+    result = db.query(MovieModel).all()
+    return JSONResponse(status_code=200, content=jsonable_encoder(result))
 
 ##Get a Movie for id
 @app.get(
@@ -126,10 +129,11 @@ def get_movies() -> List[Movie]:
     status_code=status.HTTP_200_OK
     )
 def get_movie(id: int = Path(ge=1, le=2000)) -> Movie:
-    for item in movies:
-        if item["id"] == id:
-            return JSONResponse(status_code=status.HTTP_200_OK,content=item)
-    return JSONResponse(content=[],status_code=status.HTTP_404_NOT_FOUND)
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    if not result:
+        return JSONResponse(status_code=404, content={'message': "No encontrado"})
+    return JSONResponse(status_code=200, content=jsonable_encoder(result))
 
 ##Get all Movies for category
 @app.get(
@@ -139,8 +143,9 @@ def get_movie(id: int = Path(ge=1, le=2000)) -> Movie:
     status_code=status.HTTP_200_OK
     )
 def get_movies_by_category(category: str = Query(min_length=5, max_length=15)) -> List[Movie]:
-    data = [ item for item in movies if item['category'] == category ]
-    return JSONResponse(status_code=status.HTTP_200_OK,content=data)
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.category == category).all()
+    return JSONResponse(status_code=200, content=jsonable_encoder(result))
 
 ##Post a Movie
 @app.post(
@@ -164,14 +169,17 @@ def create_movie(movie: Movie) -> dict:
     status_code=status.HTTP_200_OK
     )
 def update_movie(id: int, movie: Movie)-> dict:
-	for item in movies:
-		if item["id"] == id:
-			item['title'] = movie.title
-			item['overview'] = movie.overview
-			item['year'] = movie.year
-			item['rating'] = movie.rating
-			item['category'] = movie.category
-			return JSONResponse(status_code=status.HTTP_200_OK,content={"message": "Se ha modificado la película"})
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    if not result:
+        return JSONResponse(status_code=404, content={'message': "No encontrado"})
+    result.title = movie.title
+    result.overview = movie.overview
+    result.year = movie.year
+    result.rating = movie.rating
+    result.category = movie.category
+    db.commit()
+    return JSONResponse(status_code=200, content={"message": "Se ha modificado la película"})
 
 ##Delete
 @app.delete(
@@ -181,7 +189,10 @@ def update_movie(id: int, movie: Movie)-> dict:
     status_code=status.HTTP_200_OK
     )
 def delete_movie(id: int)-> dict:
-    for item in movies:
-        if item["id"] == id:
-            movies.remove(item)
-            return JSONResponse(status_code=status.HTTP_200_OK,content={"message": "Se ha eliminado la película"})
+    db = Session()
+    result = db.query(MovieModel).filter(MovieModel.id == id).first()
+    if not result:
+        return JSONResponse(status_code=404, content={'message': "No encontrado"})
+    db.delete(result)
+    db.commit()
+    return JSONResponse(status_code=200, content={"message": "Se ha eliminado la película"})
